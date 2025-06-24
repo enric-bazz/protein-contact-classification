@@ -130,6 +130,12 @@ def preprocess_data(input_path, drop_columns, categorical_cols, continuous_cols,
     initial_shape = df.shape
     print(f"Combined dataframe shape: {initial_shape}")
 
+    # Drop specified columns
+    if 'Interaction' in df.columns:
+        df = df.drop(columns=['Interaction'])
+    df = df.drop(columns=[col for col in drop_columns if col in df.columns])
+    print(f"\nShape after dropping columns: {df.shape}")
+
     # Handle NaN values
     nan_count_before = df.isna().sum().sum()
     if nan_count_before > 0:
@@ -142,14 +148,9 @@ def preprocess_data(input_path, drop_columns, categorical_cols, continuous_cols,
         print(f"\nShape after dropping NaN rows: {df.shape}")
         print(f"Dropped {initial_shape[0] - df.shape[0]} rows containing NaN values")
 
-    # Drop specified columns
-    if 'Interaction' in df.columns:
-        df = df.drop(columns=['Interaction'])
-    df = df.drop(columns=[col for col in drop_columns if col in df.columns])
-    print(f"Shape after dropping columns: {df.shape}")
-
     # Drop duplicate rows
     df = df.drop_duplicates()
+    print(f"\nShape after dropping duplicate rows: {df.shape}")
     
     # Load encoder
     encoder = load_encoder(encoder_path)
