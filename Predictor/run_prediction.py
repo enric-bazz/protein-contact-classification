@@ -4,8 +4,7 @@ import subprocess
 from pathlib import Path
 import pandas as pd
 import joblib
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-import tensorflow as tf
+import xgboost as xgb
 
 def run_command(command):
     """
@@ -28,48 +27,49 @@ def run_command(command):
         print(e.stderr)
         sys.exit(1)
 
+
 def process_input(input_path, output_dir=None):
     """
     Process input through calc_additional_features.py
     """
     if output_dir is None:
         output_dir = '.'
-    
+
     os.makedirs(output_dir, exist_ok=True)
-    
-    command = f"python calc_additional_features.py {input_path}"
+
+    # Update path to calc_additional_features.py
+    predictor_dir = os.path.join(os.getcwd(), 'Predictor')
+    script_path = os.path.join(predictor_dir, 'calc_additional_features.py')
+    command = f"python {script_path} {input_path}"
     if output_dir:
         command += f" -out_dir {output_dir}"
-    
+
     print(f"\nProcessing input: {input_path}")
     run_command(command)
 
-def load_preprocessors(encoder_path, scaler_path):
+
+def load_encoder(encoder_path):
     """
-    Load the OneHotEncoder and StandardScaler from pickle files
+    Load the OneHotEncoder from pickle file
     
     Parameters:
     -----------
     encoder_path : str
         Path to the saved OneHotEncoder pickle file
-    scaler_path : str
-        Path to the saved StandardScaler pickle file
         
     Returns:
     --------
-    tuple
-        (OneHotEncoder, StandardScaler)
+    OneHotEncoder
     """
     try:
         encoder = joblib.load(encoder_path)
-        scaler = joblib.load(scaler_path)
-        return encoder, scaler
+        return encoder
     except Exception as e:
-        print(f"Error loading preprocessors: {e}")
+        print(f"Error loading encoder: {e}")
         sys.exit(1)
 
 def preprocess_data(input_path, drop_columns, categorical_cols, continuous_cols, 
-                   encoder_path="onehot_encoder.pkl", scaler_path="scaler.pkl"):
+                   encoder_path="Predictor\onehot_encoder.pkl"):
     """
     Preprocess the data according to specified requirements
     
@@ -82,18 +82,20 @@ def preprocess_data(input_path, drop_columns, categorical_cols, continuous_cols,
     categorical_cols : list
         List of categorical columns to one-hot encode
     continuous_cols : list
-        List of continuous columns to scale
+        List of continuous columns
     encoder_path : str
         Path to the saved OneHotEncoder pickle file
-    scaler_path : str
-        Path to the saved StandardScaler pickle file
     
     Returns:
     --------
-    pd.DataFrame
-        Preprocessed dataframe
+    tuple
+        (preprocessed DataFrame, encoder)
     """
     print("\nStarting preprocessing...")
+
+    # Update encoder path
+    if encoder_path is None:
+        encoder_path = os.path.join(os.getcwd(), 'Predictor', 'onehot_encoder.pkl')
     
     # Load all TSV files into a single dataframe
     dfs = []
@@ -125,14 +127,32 @@ def preprocess_data(input_path, drop_columns, categorical_cols, continuous_cols,
     
     # Combine all dataframes
     df = pd.concat(dfs, axis=0, ignore_index=True)
-    print(f"Combined dataframe shape: {df.shape}")
-    
+    initial_shape = df.shape
+    print(f"Combined dataframe shape: {initial_shape}")
+
+    # Handle NaN values
+    nan_count_before = df.isna().sum().sum()
+    if nan_count_before > 0:
+        print(f"\nFound {nan_count_before} NaN values before preprocessing")
+        print("\nColumns with NaN values:")
+        print(df.isna().sum()[df.isna().sum() > 0])
+
+        # Drop rows with any NaN values
+        df = df.dropna()
+        print(f"\nShape after dropping NaN rows: {df.shape}")
+        print(f"Dropped {initial_shape[0] - df.shape[0]} rows containing NaN values")
+
     # Drop specified columns
+    if 'Interaction' in df.columns:
+        df = df.drop(columns=['Interaction'])
     df = df.drop(columns=[col for col in drop_columns if col in df.columns])
     print(f"Shape after dropping columns: {df.shape}")
+
+    # Drop duplicate rows
+    df = df.drop_duplicates()
     
-    # Load preprocessors
-    encoder, scaler = load_preprocessors(encoder_path, scaler_path)
+    # Load encoder
+    encoder = load_encoder(encoder_path)
     
     # One-hot encode categorical columns
     existing_cat_cols = [col for col in categorical_cols if col in df.columns]
@@ -142,68 +162,183 @@ def preprocess_data(input_path, drop_columns, categorical_cols, continuous_cols,
         
         # Get feature names from encoder
         feature_names = encoder.get_feature_names_out(existing_cat_cols)
-        
-        # Create dataframe with encoded features
+
+        # Create dataframe with encoded features - handle both sparse and dense matrices
+        if hasattr(cat_encoded, 'toarray'):
+            cat_encoded_data = cat_encoded.toarray()
+        else:
+            cat_encoded_data = cat_encoded
+
         cat_encoded_df = pd.DataFrame(
-            cat_encoded.toarray(),
+            cat_encoded_data,
             columns=feature_names,
             index=df.index
         )
-        
+
         # Drop original categorical columns and add encoded ones
         df = df.drop(columns=existing_cat_cols)
         df = pd.concat([df, cat_encoded_df], axis=1)
         
         print(f"Shape after one-hot encoding: {df.shape}")
     
-    # Scale continuous columns
-    existing_cont_cols = [col for col in continuous_cols if col in df.columns]
-    if existing_cont_cols:
-        # Transform continuous columns
-        scaled_features = scaler.transform(df[existing_cont_cols])
-        
-        # Replace original columns with scaled values
-        df[existing_cont_cols] = scaled_features
-        
-        print(f"Applied scaling to {len(existing_cont_cols)} continuous columns")
-    
-    return df
+    return df, encoder
 
-
-def model_prediction(preprocessed_df, model_name):
+def load_all_models(model_dir):
     """
-    Load the specified model and run predictions on preprocessed data
+    Load all XGBoost models from the models directory
 
     Parameters:
     -----------
-    preprocessed_df : pd.DataFrame
-        The preprocessed DataFrame output from preprocess_data()
-    model_name : str
-        Name of the model file (without path) to load from 'models' directory
+    model_dir : str
+        Directory containing the model files
 
     Returns:
     --------
-    numpy.ndarray
-        Model predictions
+    dict
+        Dictionary mapping interaction types to their models
+    """
+    interaction_types = ['HBOND', 'IONIC', 'PICATION', 'PIHBOND', 'PIPISTACK', 'SSBOND', 'VDW']
+    interaction_models = {}
+
+    try:
+        for interaction in interaction_types:
+            model_path = os.path.join(model_dir, f"{interaction}.joblib")
+            print(f"Loading model: {model_path}")
+            model = joblib.load(model_path)
+            interaction_models[interaction] = model
+
+        return interaction_models
+    except Exception as e:
+        print(f"Error loading models: {e}")
+        sys.exit(1)
+
+def predict_interactions(df, models):
+    """
+    Make predictions using all interaction models
+
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        Preprocessed input features
+    models : dict
+        Dictionary of loaded models for each interaction type
+
+    Returns:
+    --------
+    pd.DataFrame
+        DataFrame with prediction columns added
     """
     try:
-        # Construct model path
-        model_path = os.path.join('models', model_name)
+        predictions_df = df.copy()
+        features = df.columns.tolist()
 
-        # Load the model
-        print(f"\nLoading model from: {model_path}")
-        model = tf.keras.models.load_model(model_path)
+        for interaction, model in models.items():
+            print(f"\nPredicting {interaction}...")
+            label = model.predict(df[features])
+            score = model.predict_proba(df[features])[:, 1]
+            predictions_df[interaction] = label.astype(int)
+            predictions_df[f'{interaction}_SCORE'] = score
 
-        # Make predictions
-        print("Running predictions...")
-        predictions = model.predict(preprocessed_df)
+        return predictions_df
 
-        return predictions
+    except Exception as e:
+        print(f"Error making predictions: {e}")
+        sys.exit(1)
 
+def process_output(predictions_df, encoder, df_restored):
+    """
+    Process the predictions output by reversing one-hot encoding and reformatting predictions
+
+    Parameters:
+    -----------
+    predictions_df : pd.DataFrame
+        DataFrame with raw predictions from predict_interactions()
+    encoder : OneHotEncoder
+        The fitted OneHotEncoder object used in preprocessing
+    df_restored : pd.DataFrame
+        DataFrame with original identifier columns to be restored
+
+    Returns:
+    --------
+    pd.DataFrame
+        Final processed DataFrame with formatted predictions
+    """
+    try:
+        # Define categorical columns and interaction types
+        categorical_cols = ['s_resn', 't_resn', 's_ss8', 't_ss8']
+        interaction_types = ['HBOND', 'IONIC', 'PICATION', 'PIHBOND', 'PIPISTACK', 'SSBOND', 'VDW']
+
+        # Step 1: Reverse one-hot encoding
+        print("\nReversing one-hot encoding...")
+        encoded_columns = encoder.get_feature_names_out(categorical_cols)
+        df_encoded_part = predictions_df[encoded_columns]
+
+        decoded_data = encoder.inverse_transform(df_encoded_part)
+        decoded_df = pd.DataFrame(decoded_data, columns=categorical_cols)
+
+        df_pred_dropped_encoded = predictions_df.drop(columns=encoded_columns)
+        df_reversed_ohe = pd.concat([df_pred_dropped_encoded.reset_index(drop=True),
+                                     decoded_df.reset_index(drop=True)], axis=1)
+
+        # Step 2: Reformat predictions
+        print("Reformatting predictions...")
+        interaction_list = []
+        score_list = []
+
+        for index, row in df_reversed_ohe.iterrows():
+            predicted_interactions = []
+            predicted_scores = []
+            for interaction in interaction_types:
+                if row[interaction] == 1:
+                    predicted_interactions.append(interaction)
+                    # Round the score to 4 decimal places
+                    predicted_scores.append(round(float(row[f'{interaction}_SCORE']), 4))
+
+            interaction_list.append(predicted_interactions)
+            score_list.append(predicted_scores)
+
+        # Add interaction and score lists
+        df_reversed_ohe['Interaction'] = interaction_list
+        df_reversed_ohe['score'] = score_list
+
+        # Drop temporary columns
+        columns_to_drop = []
+        for inter_type in interaction_types:
+            columns_to_drop.extend([inter_type, f'{inter_type}_SCORE'])
+        df_reversed_ohe = df_reversed_ohe.drop(columns=columns_to_drop)
+
+        # Drop duplicate columns from OHE
+        df_reversed_ohe = df_reversed_ohe.drop(columns=['s_resn', 't_resn'])
+
+        # Restore original columns
+        df_restored = df_restored.loc[df_reversed_ohe.index].reset_index(drop=True)
+        df_final = pd.concat([df_restored, df_reversed_ohe], axis=1)
+
+        print("Output processing complete.")
+        return df_final
+
+    except Exception as e:
+        print(f"Error processing output: {e}")
+        sys.exit(1)
+
+def model_prediction(preprocessed_df, model_dir, df_restored, encoder):
+    """
+    Load models and run predictions on preprocessed data
+    """
+    try:
+        print(f"\nLoading XGBoost models from: {model_dir}")
+        interaction_models = load_all_models(model_dir)
+        
+        print("\nRunning predictions...")
+        predictions_df = predict_interactions(preprocessed_df, interaction_models)
+        
+        final_df = process_output(predictions_df, encoder, df_restored)
+        
+        return final_df
+        
     except Exception as e:
         print(f"Error in model prediction: {e}")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     if len(sys.argv) not in [2, 3]:
@@ -222,48 +357,64 @@ if __name__ == "__main__":
         sys.exit(1)
     
     # Define preprocessing parameters
-    drop_columns = [
-        # Add columns to drop here
-        # Example: 'column1', 'column2'
-    ]
-    
-    categorical_cols = [
-        # Add categorical columns here
-        # Example: 'category1', 'category2'
-    ]
+    drop_columns = ['s_3di_letter', 't_3di_letter', 's_3di_state', 't_3di_state',
+                    'pdb_id', 's_ch', 't_ch', 's_ins', 't_ins']
+
+    categorical_cols = ['s_resn', 't_resn', 's_ss8', 't_ss8']
     
     continuous_cols = [
-        # Add continuous columns here
-        # Example: 'numeric1', 'numeric2'
+        's_resi', 's_rsa', 's_phi', 's_psi', 's_a1', 's_a2', 's_a3', 's_a4', 's_a5',
+        't_resi', 't_rsa', 't_phi', 't_psi', 't_a1', 't_a2', 't_a3', 't_a4', 't_a5',
+        'delta_rsa', 'delta_atchley_1', 'delta_atchley_2', 'delta_atchley_3', 'delta_atchley_4', 'delta_atchley_5',
+        'ca_distance', 's_centroid_x', 's_centroid_y', 't_centroid_x', 't_centroid_y'
     ]
 
-    # Specify model name
-    model_name = 'model.h5'  # Update this with your actual model filename
-
-    # First run calc_additional_features.py
+    # Process input
     process_input(input_path, output_dir)
-    
+
     # Run preprocessing on the output
     output_path = output_dir if output_dir else '.'
     if os.path.isfile(os.path.join(output_path, 'features_ring_extended.zip')):
-        preprocessed_df = preprocess_data(
+        # Update encoder path
+        encoder_path = os.path.join(os.getcwd(), 'Predictor', 'onehot_encoder.pkl')
+
+        preprocessed_df, encoder = preprocess_data(
             os.path.join(output_path, 'features_ring_extended.zip'),
             drop_columns,
             categorical_cols,
-            continuous_cols
+            continuous_cols,
+            encoder_path=encoder_path
         )
-        
+
         # Save preprocessed data
         preprocessed_path = os.path.join(output_path, 'preprocessed_features.tsv')
         preprocessed_df.to_csv(preprocessed_path, sep='\t', index=False)
         print(f"\nPreprocessed data saved to: {preprocessed_path}")
+        
+        # Restore original dataframe
+        df = pd.read_csv(os.path.join(output_path, 'features_ring_extended.zip'), sep='\t')
+
+        # Save original columns for later restoration
+        restored_cols = ['s_ch', 's_resi', 's_ins', 's_resn',
+                         't_ch', 't_resi', 't_ins', 't_resn']
+        df_restored = df[restored_cols]
+
+        # Update model directory path
+        model_dir = os.path.join(os.getcwd(), 'Predictor', 'models', 'xgboost')
 
         # Run model predictions
-        predictions = model_prediction(preprocessed_df, model_name)
+        predictions = model_prediction(
+            preprocessed_df,
+            model_dir,
+            df_restored,
+            encoder
+        )
 
-        # Save predictions (basic format for now)
-        predictions_path = os.path.join(output_path, 'predictions.csv')
-        pd.DataFrame(predictions).to_csv(predictions_path, index=False)
+        # Get the base input filename without extension
+        input_filename = os.path.basename(input_path)
+        pdb_id = input_filename.split('.')[0]  # removes .tsv extension
 
-# TODO the model name, standard scaler, OHE, categorical columns, continuos columns, dropped columns are all model/dataset
-#  specific. We should have a way to pass these parameters to the script, or we implement a single model and hardcode them here.
+        # Save predictions
+        predictions_path = os.path.join(output_path, f'{pdb_id}_prediction.tsv')
+        pd.DataFrame(predictions).to_csv(predictions_path, sep='\t', index=False)
+        print(f"\nPredictions saved to: {predictions_path}")

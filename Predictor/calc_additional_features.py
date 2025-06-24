@@ -114,6 +114,16 @@ def add_ca_distances(df, pdb_id):
     df['ca_distance'] = df.apply(lambda row: calculate_ca_distance(row, ca_coords), axis=1)
     return df
 
+def find_states_file():
+    """
+    Look for states.txt in the same directory as the script
+    Returns the path to states.txt if found, None otherwise
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    states_file = os.path.join(script_dir, 'states.txt')
+    if os.path.exists(states_file):
+        return states_file
+    return None
 
 def add_centroid_coordinates(df, states_file):
     """Add centroid coordinates for 3di states."""
@@ -189,17 +199,29 @@ if __name__ == '__main__':
         logging.info(f"Processing {pdb_id}")
         
         try:
-            # Add new features
+            # Add features that don't require PDB structure
             df = add_same_chain(df)
             df = add_delta_rsa(df)
             df = add_delta_atchley(df)
+
+            # Add CA distances (may fail for some structures)
             df = add_ca_distances(df, pdb_id)
-            
+
+            # Find states.txt file in script directory
+            states_file_path = find_states_file()
+            if states_file_path:
+                logging.info(f"Found states.txt in script directory: {states_file_path}")
+            else:
+                logging.warning(
+                    "states.txt not found in script directory. Centroid coordinates will not be calculated.")
+
             # Add centroid coordinates if states file exists
-            states_file = "states.txt"  # Update path as needed
-            if os.path.exists(states_file):
-                df = add_centroid_coordinates(df, states_file)
-            
+            if states_file_path:
+                df = add_centroid_coordinates(df, states_file_path)
+            else:
+                logging.info(
+                    f"{pdb_id}: Skipping centroid coordinates calculation - states.txt not found in script directory")
+
             # Store the processed DataFrame
             processed_dataframes[pdb_id] = df
             
