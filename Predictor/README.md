@@ -130,7 +130,7 @@ Run the notebook directly in the browser without any setup:
 
 Alternatively, you can follow the launch badge below:
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/enric-bazz/protein-contact-classification/master/Predictor/Predictor.ipynb)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/enric-bazz/protein-contact-classification/blob/master/Predictor/Predictor.ipynb)
 
 #### Option 2: Run Locally
 
