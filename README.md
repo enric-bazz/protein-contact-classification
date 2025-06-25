@@ -5,7 +5,7 @@ This project is part of the **Structural Bioinformatics course at the University
 ## Table of Contents
 - [Project Overview](#project-overview)
 - [Repository Structure](#repository-structure)
-- [Usage](#usage)
+- [Quick-start](#quick-start)
 - [Authors](#authors)
 
 ## Project Overview
@@ -43,8 +43,8 @@ The objectives of the project are:
 └── requirements.txt
 ```
 
-## Usage
-To use the software, follow these initial steps:
+## Quick-start
+To use the software, follow these steps:
 
 1. Clone the repository:
     ```sh
@@ -57,7 +57,7 @@ To use the software, follow these initial steps:
     ```
     Move your input data into this directory. Once the data is in place, you can run the prediction script directly:
     ```sh
-   python Predictor/run_prediction.py
+   python Predictor/run_prediction.py pdb_id.tsv
     ```
    Alternatively, navigate to your preferred working directory and copy the Predictor/ folder into it:
    - On Unix/macOS:
@@ -72,7 +72,7 @@ To use the software, follow these initial steps:
    ```
    Then place your .tsv input files in the same directory and run:
    ```sh
-   python Predictor/run_prediction.py
+   python Predictor/run_prediction.py pdb_id.tsv
    ```
 
 
