@@ -25,25 +25,21 @@ The objectives of the project are:
  - **Notebooks**: Contains all the notebooks used for feature extraction, data pre-preocessing, model developement and additional material with detailed step-by-step explanations.
  - **Predictor**: Contains ready-to-use software and documentation
  - **Report**: Contains the report of the project, including methodologies, final results, and discussions.
+ - `features_ring.zip`: zip archive with model developement raw data.
+ - `environment.yml` and `requirements.txt`: Files for managing project dependencies.
+
 ```bash
-├── data/
-│   ├── raw/                  # Raw input data and PDB files
-│   ├── processed/            # Feature matrices and cleaned data
-├── features/
-│   ├── calc_features.py      # Extracts structural features using BioPython and DSSP
-│   ├── calc_3di.py           # Converts sequences to 3Di representation
-├── models/
-│   ├── train.py              # Training script for ML models
-│   ├── model.pkl             # Example saved model
-├── predictor/
-│   └── predict.py            # Contact type prediction from new PDB files
-├── config/
-│   └── config.json           # Paths to tools, data, and model hyperparameters
-├── notebooks/
+├── Notebooks/
 │   └── classifier.ipynb      # Naive Bayes baseline example
-├── docs/
+├── Predictor/
+│   ├── models/
+│   │   ├── xgboost/
+│   └── predict.py            # Contact type prediction from new PDB files
+├── Report/
 │   └── report.pdf            # Final report
+├── features_ring.zip         # Raw data for model developement
 ├── README.md
+├── environment.yml
 └── requirements.txt
 ```
 
@@ -52,16 +48,35 @@ To use the software, follow these initial steps:
 
 1. Clone the repository:
     ```sh
-    git clone https://github.com/yourusername/protein-contact-classification.git
-    cd protein-contact-classification
+    git clone https://github.com/enric-bazz/protein-contact-classification.git
     ```
 
-2. Navigate to the repository directory (suggested working directory):
+2. Navigate to the repository directory and use it as your working directory:
     ```sh
     cd protein-contact-classification
     ```
+    Move your input data into this directory. Once the data is in place, you can run the prediction script directly:
+    ```sh
+   python Predictor/run_prediction.py
+    ```
+   Alternatively, navigate to your preferred working directory and copy the Predictor/ folder into it:
+   - On Unix/macOS:
+   ```bash
+   cd /path/to/your/working_directory
+   cp -r /path/to/protein-contact-classification/Predictor .
+   ```
+   - On Windows:
+   ```cmd
+   cd path\to\your\working_directory
+   xcopy /E /I /Y path\to\protein-contact-classification\Predictor .
+   ```
+   Then place your .tsv input files in the same directory and run:
+   ```sh
+   python Predictor/run_prediction.py
+   ```
 
-3. Follow the folder `README.md` in `Predictor`
+
+4. For usage details and extended documentation consult the `README.md` file in the `Predictor` folder.
 
 ## Authors
 This project is developed by the following authors:
