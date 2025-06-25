@@ -25,8 +25,11 @@ The objectives of the project are:
  - **Notebooks**: Contains all the notebooks used for feature extraction, data pre-preocessing, model developement and additional material with detailed step-by-step explanations.
  - **Predictor**: Contains ready-to-use software and documentation
  - **Report**: Contains the report of the project, including methodologies, final results, and discussions.
+ - **models_dev_results**: Contains the developed models, validtion metrics, parameters and result plots organized as per-model and per-dataset experiments.
  - `features_ring.zip`: zip archive with model developement raw data.
  - `environment.yml` and `requirements.txt`: Files for managing project dependencies.
+ - `output`: Software output folder example, obtained with the `1i27.tsv` file.
+ - `calc_features.py` and `calc_3di-py`: Scripts that produce the files fed in input to the software.
 
 ```bash
 ├── Notebooks/                      # Jupyter notebooks for experimentation and development
@@ -55,9 +58,24 @@ The objectives of the project are:
 │           ├── SSBOND.joblib
 │           └── VDW.joblib
 
+├── models_dev_results/        # Training results and exported models
+│   ├── perlabel_nn/           # Results for neural networks
+│   └── xgboost/               # Results for XGBoost runs (SMOTE and non-SMOTE)
+
+├── output/                    # Example predictions and intermediate data
+│   ├── pdb_id.tsv             # pre-processed tsv file
+│   ├── pdb_id_predictions.csv # software prediction (FINAL OUTPUT)
+│   └── features_ring_extended.zip
+
+├── Report/                    # Final project report
+│   └── Report.pdf
+
 ├── features_ring.zip              # Raw structural interaction data for training
 ├── environment.yml                # Conda environment definition
 ├── requirements.txt               # pip-based dependency list
+├── 1i27.tsv                       # Example input
+├── calc_3di.py                    # 3Di descriptor extractor
+├── calc_features.py               # Feature assembly logic
 └── README.md                      # Main project documentation
 
 ```
