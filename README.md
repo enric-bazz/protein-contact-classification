@@ -29,18 +29,37 @@ The objectives of the project are:
  - `environment.yml` and `requirements.txt`: Files for managing project dependencies.
 
 ```bash
-├── Notebooks/
-│   └── classifier.ipynb      # Naive Bayes baseline example
-├── Predictor/
-│   ├── models/
-│   │   ├── xgboost/
-│   └── predict.py            # Contact type prediction from new PDB files
-├── Report/
-│   └── report.pdf            # Final report
-├── features_ring.zip         # Raw data for model developement
-├── README.md
-├── environment.yml
-└── requirements.txt
+├── Notebooks/                      # Jupyter notebooks for experimentation and development
+│   ├── Experiments Missing Interactions.ipynb
+│   ├── Feature Extraction.ipynb
+│   ├── MultiLabel NN Model.ipynb
+│   ├── PerLabel NN Model.ipynb
+│   ├── Pre-Processing New Data.ipynb
+│   ├── Pre-Processing Original Data.ipynb
+│   └── XGBoost Model.ipynb
+
+├── Predictor/                      # Prediction pipeline and pretrained models
+│   ├── calc_additional_features.py        # Additional feature computation
+│   ├── onehot_encoder.pkl                 # Pretrained encoder for categorical features
+│   ├── Predictor.ipynb                    # Interactive prediction workflow
+│   ├── README.md                          # Module-level documentation
+│   ├── run_prediction.py                  # Main script for predicting contact types
+│   ├── states.txt                         # States definition for feature extraction
+│   └── models/
+│       └── xgboost/                       # Trained XGBoost models (one per class)
+│           ├── HBOND.joblib
+│           ├── IONIC.joblib
+│           ├── PICATION.joblib
+│           ├── PIHBOND.joblib
+│           ├── PIPISTACK.joblib
+│           ├── SSBOND.joblib
+│           └── VDW.joblib
+
+├── features_ring.zip              # Raw structural interaction data for training
+├── environment.yml                # Conda environment definition
+├── requirements.txt               # pip-based dependency list
+└── README.md                      # Main project documentation
+
 ```
 
 ## Quick-start
