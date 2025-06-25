@@ -13,12 +13,12 @@ This software is designed to be run **after** executing the `calc_feature.py` an
 
 To run the software from the terminal:
 
-1. Environment Setup
+### Step 1. Environment Setup
 It is recommended to run the software inside a **dedicated virtual environment** to avoid dependency conflicts.
 
 You can set up the environment using either of the following:
 
-- `environment.yml` (for Conda users)
+- `environment.yml` (for Conda users, tested)
 - `requirements.txt` (for `pip` users)
 
 If issues persist, a full list of required packages is provided:
@@ -32,7 +32,8 @@ If issues persist, a full list of required packages is provided:
 
 > **Note:** The listed dependencies **do not** include those required to execute the scripts `calc_feature.py` and `cal_3di.py`, which must be run beforehand to generate the input `.tsv` files.
 
-2. Ensure that the `Predictor/` folder is downloaded and placed in your **current working directory**.
+### Step 2. 
+Ensure that the `Predictor/` folder is downloaded and placed in your **current working directory**.
    
    This folder contains:
    - `run_prediction.py` – main prediction script
@@ -41,7 +42,8 @@ If issues persist, a full list of required packages is provided:
    - `onehot_encoder.pkl` – for data preprocessing
    - `models/xgboost/` – directory containing `.joblib` trained models
 
-3. Make sure the required `.tsv` input files (produced by `calc_feature.py` and `cal_3di.py`) are also located in the current working directory.
+### Step 3. 
+Make sure the required `.tsv` input files (produced by `calc_feature.py` and `cal_3di.py`) are also located in the current working directory.
 
 The expected directory structure is:
 ```
@@ -58,7 +60,7 @@ working_dir/
 │           └── ... (other model files)
 ```
 
-4. Run the prediction script:
+### Step 4. Run the prediction script
 
 The `run_prediction.py` script supports three types of inputs:
 1. **Single TSV file**
@@ -68,7 +70,7 @@ The `run_prediction.py` script supports three types of inputs:
 A usage example for each type of input is shown:
 * **Single TSV file**:
 ``` bash
-python run_prediction.py input_data.tsv  [output_dir]
+python run_prediction.py pdb_id.tsv  [output_dir]
 ```
 * **Directory containing TSV files**:
 ``` bash
@@ -106,11 +108,11 @@ Example file structure after running:
 ```
 output_directory/
 ├── features_ring_extended.zip
-├── pdb_id_structure1.tsv
-├── pdb_id_structure2.tsv
+├── pdb_id_1.tsv
+├── pdb_id_2.tsv
 ├── ...
 ├── preprocessed_features.tsv
-└── èdb_id_prediction.tsv
+└── pdb_id_prediction.tsv
 ```
 ---
 
@@ -189,6 +191,7 @@ output_directory/
 └── ...
 ```
 
-Note: The script requires:
+> Note.
+The script requires:
 - `states.txt` file in the script directory
 - Internet connection to download PDB files for CA distance calculations
