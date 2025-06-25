@@ -1,0 +1,25 @@
+# Ignore files from project material
+calc_features.py
+calc_3di.py
+classifier.ipynb
+configuration.json
+ramachandran.dat
+atchley.tsv
+3di_model/
+bin/
+
+# Ignore pycharm .idea folder
+.idea/
+
+# Ignore discarded files folder
+Discarded/
+
+# Ignore Predictor output
+output/
+features_ring_extended.zip
+
+# Ignore test files
+1aba.tsv
+1b0y.tsv
+1i27.tsv
+pdb2v6v.ent
