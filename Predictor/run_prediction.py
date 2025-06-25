@@ -37,7 +37,7 @@ def process_input(input_path, output_dir=None):
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # Update path to calc_additional_features.py
+    # Set path to calc_additional_features.py
     predictor_dir = os.path.join(os.getcwd(), 'Predictor')
     script_path = os.path.join(predictor_dir, 'calc_additional_features.py')
     command = f"python {script_path} {input_path}"
@@ -376,7 +376,7 @@ if __name__ == "__main__":
     # Run preprocessing on the output
     output_path = output_dir if output_dir else '.'
     if os.path.isfile(os.path.join(output_path, 'features_ring_extended.zip')):
-        # Update encoder path
+        # Set encoder path
         encoder_path = os.path.join(os.getcwd(), 'Predictor', 'onehot_encoder.pkl')
 
         preprocessed_df, encoder = preprocess_data(
@@ -400,7 +400,7 @@ if __name__ == "__main__":
                          't_ch', 't_resi', 't_ins', 't_resn']
         df_restored = df[restored_cols]
 
-        # Update model directory path
+        # Setmodel directory path
         model_dir = os.path.join(os.getcwd(), 'Predictor', 'models', 'xgboost')
 
         # Run model predictions

@@ -239,5 +239,3 @@ if __name__ == '__main__':
             logging.error(f"Error saving results: {e}")
     else:
         logging.error("No structures were successfully processed")
-
-    # TODO Run with conda activate sb-env ... python Predictor\calc_additional_features.py features_ring.zip -out_dir C:\Users\enric\sb_project
