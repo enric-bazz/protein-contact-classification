@@ -160,13 +160,15 @@ def save_to_zip(processed_dfs, output_dir):
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             for pdb_id, df in processed_dfs.items():
                 # Save individual TSV file
-                tsv_filename = f"{pdb_id}.tsv"
+                tsv_filename = f"{pdb_id}_extendend.tsv"
                 tsv_path = os.path.join(output_dir, tsv_filename)
                 df.to_csv(tsv_path, sep='\t', index=False)
                 logging.info(f"Saved {tsv_filename}")
                 
                 # Add to ZIP file
                 zip_file.write(tsv_path, tsv_filename)
+
+            # TODO: make zip file output optional
     
     logging.info(f"Created ZIP archive: {zip_path}")
     return zip_path
