@@ -166,7 +166,7 @@ python calc_additional_features.py <input_path> [-out_dir OUTPUT_DIR]
 **Output Files:**
 1. **Individual TSV Files:**
    - One TSV file per PDB structure
-   - Named as `{pdb_id}.tsv`
+   - Named as `{pdb_id}_extended.tsv`
    - Contains original data plus additional calculated features:
      - `same_chain`: Boolean indicating if residues are in same chain
      - `delta_rsa`: Absolute difference in relative solvent accessibility
